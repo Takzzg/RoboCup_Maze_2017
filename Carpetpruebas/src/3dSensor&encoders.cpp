@@ -41,45 +41,6 @@ imu::Vector<3> vector_euler;
 imu::Vector<3> vector_acc;
 imu::Vector<3> vector_euler_init;
 
-//adafruit_bno055_rev_info_t* info;
-
-/**************************/
-/*
-    Display sensor calibration status
-*/
-/**************************/
-
-void displayCalStatus(void)
-{
-  // Get the four calibration values (0..3)
-  // Any sensor data reporting 0 should be ignored,
-  // 3 means 'fully calibrated"
-  uint8_t system, gyro, accel, mag;
-  system = gyro = accel = mag = 0;
-  bno.getCalibration(&system, &gyro, &accel, &mag);
-
-  // The data should be ignored until the system calibration is > 0
-  pc.printf("\t");
-  if (!system)
-  {
-    pc.printf("! ");
-  }
-
-  // Display the individual values
-  pc.printf("Sys: %X   G: %X   A: %X   M: %X\n ",system,gyro,accel,mag);
-    //pc.printf("G: %X\n", gyro);
-  //pc.printf("A: %X\n", accel);
-  //pc.printf("M: %X\n", mag);
-  /*Serial.printf("Sys :");
-  Serial.printf(system, DEC);
-  Serial.printf(" G:");
-  Serial.printf(gyro, DEC);
-  Serial.printf(" A:");
-  Serial.printf(accel, DEC);
-  Serial.printf(" M:");
-  Serial.print(mag, DEC);*/
-}
-
 void displaySensorStatus(void)
 {
   /* Get the system status values (mostly for debugging purposes) */
