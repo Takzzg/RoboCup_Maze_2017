@@ -85,7 +85,13 @@ struct Cell {
   int x, y, z;
   int linkedFloor;
 };
-
+/**
+ * [initCells resets all variables to default for a new cell]
+ * @param targ [target cell]
+ * @param Z    [Z-axis position]
+ * @param Y    [Y-axis position]
+ * @param X    [X-axis position]
+ */
 void initCells(struct Cell *targ, int Z, int Y, int X) {
   targ->z = Z;
   targ->y = Y;
@@ -106,7 +112,11 @@ void initCells(struct Cell *targ, int Z, int Y, int X) {
   targ->victimStatus = 'F';
   targ->instructions = new char[0];
 }
-
+/**
+ * [assignCells copies the information from one cell to another]
+ * @param to   [cell the info is being copied to]
+ * @param from [cell the info is being copied from]
+ */
 void assignCells(struct Cell *to, struct Cell from){
   to->black = from.black;
   to->exit = from.exit;
@@ -127,6 +137,9 @@ void assignCells(struct Cell *to, struct Cell from){
 }
  //---------------------------------------------- CELLS ------------------------------------------------
  //--------------------------------------------- MOVEMENT ------------------------------------------------
+/**
+ * [displaySensorStatus does what the title says]
+ */
 void displaySensorStatus(void){
   /* Get the system status values (mostly for debugging purposes) */
   uint8_t system_status, self_test_results, system_error;
@@ -140,20 +153,16 @@ void displaySensorStatus(void){
   pc.printf("System Error: %X\n",system_error);
   wait_ms(500);
 }
-
+/**
+ * [updateSpeedMotors prevents motor from randomly getting stuck]
+ */
 void updateSpeedMotors(){
   M_izq = speed_mizq;
   M_der = speed_mder;
 }
-
-int getIndex(int Z, int Y, int X, int ySum, int xSum) {
-  return X + Y * (xSize + xSum) + Z * (xSize + xSum) * (ySize + ySum);
-}
-
-int getIndex(int Z, int Y, int X) {
-  return X + Y * xSize + Z * xSize * ySize;
-}
-
+/**
+ * [init_value_3d_sensor reads the an initial value for the x-axis  to determinate wich direction the robot was facing]
+ */
 void init_value_3d_sensor(){
   //wait_ms(1000);
   quat = bno.getQuat();
@@ -161,7 +170,10 @@ void init_value_3d_sensor(){
   vector_euler_init.toDegrees();
   wait_ms(1000);
 }
-
+/**
+ * [turn_90 makes a 90 degree turn]
+ * @param direction [sets the orientation of the motors]
+ */
 void turn_90(int direction){
  init_value_3d_sensor();
  float eje_x = 0;
@@ -190,7 +202,10 @@ void turn_90(int direction){
   speed_mder = 0;
   wait_ms(500);
 }
-
+/**
+ * [moveTile makes the robot advance or go backwards one tile]
+ * @param direction [sets the orientation of the motors]
+ */
 void moveTile(int direction){
   leftQei.reset();
   rightQei.reset();
@@ -228,23 +243,34 @@ void moveTile(int direction){
   rightQei.reset();
   wait_ms(500);
 }
-
+/**
+ * [turn_left90 makes a 90 degree turn to the left]
+ */
 void turn_left90(){
   turn_90(-1);
 }
-
+/**
+ * [turn_right90 makes a 90 degree turn to the right]
+ */
 void turn_right90(){
   turn_90(1);
 }
-
+/**
+ * [moveTileForward makes the robot advance one tile]
+ */
 void moveTileForward(){
   moveTile(1);
 }
-
+/**
+ * [moveTileBackward makes the robot go backwards one tile]
+ */
 void moveTileBackward(){
   moveTile(-1);
 }
-
+/**
+ * [moveRobot checks if the robot is facing the way it should to continue exploring the maze]
+ * @param destination [is the target orientation in wich the robot will finish facing]
+ */
 void moveRobot(char destination) {
   bool reverse = false; //instead of turning 180°, we can go back 30cm and keep the direction
 
@@ -323,122 +349,84 @@ void moveRobot(char destination) {
 }
  //--------------------------------------------- MOVEMENT ------------------------------------------------
  //----------------------------------------------- ARENA ------------------------------------------------
-struct Cell lastCheckpoint; //The last checkpoint visited
-int historySize = 1; //keeps track of the amount of tiles in the array
-struct Cell *history = new struct Cell[historySize];
-struct Cell *arena = new struct Cell[zSize * ySize * xSize];
+/**
+ * [addLayer increases the size of the arena when needed]
+ * @param axis [in which direction the arena is going to grow]
+ */
+ void addLayer(char axis) {
+   if (axis == 'x'){
+     arena.at(z).at(y).resize(arena.at(z).at(y).size() + 1);
+     initCells(&arena.at(z).at(y).at(arena.at(z).at(y).size() - 1), z, y, arena.at(z).at(y).size() - 1);
+   }
+   else if (axis == 'y'){
+     arena.at(z).resize(arena.at(z).size() + 1);//make it one unit taller
+     arena.at(z).at(arena.at(z).size() - 1).resize(x + 1);//make the last layer as wide as necessary
+     for(unsigned int i = 0; i < arena.at(z).size(); i++){
+       initCells(&arena.at(z).at(arena.at(z).size() - 1).at(i), z, arena.at(z).size() - 1, i);
+     }
+   }
+   else if (axis == 'z'){
+     arena.resize(arena.size() + 1);
+     arena.at(arena.size() - 1).resize(1);
+     arena.at(arena.size() - 1).at(0).resize(1);
+     initCells(&arena.at(arena.size() - 1).at(0).at(0), arena.size() - 1, 0, 0);
+   }
+ }
+ /**
+  * [addLayer increments the arena a preseted size (?)]
+  * @param axis [direction in which the arena grows]
+  * @param Y    [amount of cells the arena grows (?)]
+  */
+ void addLayer(char axis, int Y){
+   arena.at(z).at(Y).resize(arena.at(z).at(Y).size() + 1);
+   initCells(&arena.at(z).at(Y).at(arena.at(z).at(Y).size() - 1), z, Y, arena.at(z).at(Y).size() - 1);
+ }
+/**
+ * [shift moves the tiles down or to the right]
+ * @param axis [in wich direction shifts the arena]
+ */
+ void shift(char axis) {
+   if (axis == 'x') {//add a layer to the left
+     x++;
+     for(unsigned int i = 0; i < arena.at(z).size(); i++){
+       addLayer('x', i);
+     }
+     for(unsigned int i = 0; i < arena.at(z).size(); i++){
+       for(int j = arena.at(z).at(i).size() - 1; j > 0; j--){
+         assignCells(&arena.at(z).at(i).at(j), arena.at(z).at(i).at(j-1));
+       }
+     }
+     for(unsigned int i = 0; i < arena.at(z).size(); i++){
+       initCells(&arena.at(z).at(i).at(0), z, i, 0);
+     }
+   }
+   else if (axis == 'y') {
+     y++;
+     addLayer('y');
 
-struct Cell addOption(char a, struct Cell compareFrom, struct Cell compareTo, int addWeight) {
-  compareTo.weight = compareFrom.weight + addWeight; //changes its weight
-  compareTo.instructionsSize = compareFrom.instructionsSize + 1;
-  compareTo.instructions = new char[1 + compareFrom.instructionsSize];
-  for (int i  = 0; i < compareFrom.instructionsSize; i++) {
-    compareTo.instructions[i] = compareFrom.instructions[i];
-  }
-  compareTo.instructions[compareTo.instructionsSize-1] = a; //an extra instruction to get to compareTo is added
-  arena[getIndex(compareTo.z, compareTo.y, compareTo.x)] = compareTo; //the matrix is updated with the newest information
-  return compareTo;
-}
-
-void addLayer(char axis) {
-  if (axis == 'x') { //we have to add a layer to the right of the arena
-    struct Cell *tempArena = new struct Cell[(xSize + 1) * ySize * zSize]; //we create another matrix which is one unit wider.
-    for (int h = 0; h < zSize; h++) {
-      for (int i = 0; i < ySize; i++) {
-        for (int j = 0; j < xSize+1; j++) {
-          initCells(&tempArena[getIndex(h, i, j, 0, 1)], h, i, j);//we initialize the new cells, this gives them their coordinates and deletes resitual data.
-        }
-      }
-    }
-    for (int h = 0; h < zSize; h++) { //for every layer (z axis)
-      for (int i = 0; i < ySize; i++) { //for every line in the arena
-        for (int j  = 0; j < xSize; j++) { //for every column in the arena
-          tempArena[getIndex(h, i, j, 0, 1)] = arena[getIndex(h, i, j)]; //we copy from arena to tempArena.
-        }
-      }
-    }
-    arena = new struct Cell[ySize * ++xSize * zSize]; //we resize the arena and increment the width.
-    for (int  i = 0; i < ySize * xSize * zSize; i++) {
-      arena[i] = tempArena[i];
-    }
-    delete[] tempArena;
-  }
-  else if (axis == 'y') { //we have to add a layer to the bottom of the arena
-    struct Cell *tempArena = new struct Cell[(ySize + 1) * xSize * zSize];
-    for (int h = 0; h < zSize; h++) {
-      for (int i = 0; i < ySize+1; i++) {
-        for (int j = 0; j < xSize; j++) {
-          initCells(&tempArena[getIndex(h, i, j, 1, 0)], h, i, j);//we initialize the new cells, this gives them their coordinates and deletes resitual data.
-        }
-      }
-    }
-    for (int h = 0; h < zSize; h++) { //for every layer (z axis)
-      for (int i = 0; i < ySize; i++) { //for every line in the arena
-        for (int j  = 0; j < xSize; j++) { //for every column in the arena
-          tempArena[getIndex(h, i, j, 1, 0)] = arena[getIndex(h, i, j)]; //we copy from arena to tempArena.
-        }
-      }
-    }
-    arena = new struct Cell[++ySize * xSize * zSize];//we resize the arena and increment the height.
-    for (int  i = 0; i < ySize * xSize * zSize; i++) {
-      arena[i] = tempArena[i];//we copy from tempArena to arena
-    }
-    delete[] tempArena;
-  }
-  else if (axis == 'z'){
-    struct Cell *tempArena = new struct Cell[(zSize + 1) * xSize * ySize];
-    for(int i = 0; i < zSize * xSize * ySize; i++){
-      tempArena[i] = arena[i];//We copy all the previous floors to tempArena. The newest floor is not initialized.
-    }
-    for (int i = 0; i < ySize; i++) {
-      for (int j = 0; j < xSize; j++) {
-        initCells(&tempArena[getIndex(zSize, i, j)], zSize, i, j);//We initialize the latest floor.
-      }
-    }
-    arena = new struct Cell[xSize * ySize * ++zSize];//we resize the arena and increment the depth.
-    for(int i = 0; i < zSize * xSize * ySize; i++){
-      arena[i] = tempArena[i];//we copy from tempArena to arena
-    }
-    delete[] tempArena;
-  }
-}
-
-void shift(char axis) {
-  if (axis == 'x') {//add a layer to the left
-    x++;
-    addLayer('x');//add a layer to the right, then
-    for (int h = 0; h < zSize; h++) {
-      for (int i = 0; i < ySize; i++) {
-        for (int j = xSize-1; j > 0; j--) {//for every cell, from right to left
-          assignCells(&arena[getIndex(h, i, j)], arena[getIndex(h, i, j - 1)]);//we copy ALMOST(not the coordinates please!) all the data from the cell to the left of it.
-        }
-      }
-    }
-    for (int h = 0; h < zSize; h++) {
-      for (int i = 0; i < ySize; i++) {
-        initCells(&arena[getIndex(h, i, 0, 0, 1)], h, i, 0);//then initialize(we wipe it) the first column because it has old data which is now to the right.
-      }
-    }
-  }
-  else if (axis == 'y') {
-    y++;
-    addLayer('y');
-    for (int h = 0; h < zSize; h++) {
-      for (int i = ySize-1; i > 0; i--) {
-        for (int j = 0; j < xSize; j++) {
-          assignCells(&arena[getIndex(h, i, j)], arena[getIndex(h, i - 1, j)]);
-        }
-      }
-    }
-    for (int h = 0; h < zSize; h++) {
-      for (int j = 0; j < xSize; j++) {
-          initCells(&arena[getIndex(h, 0, j, 0, 1)], h, 0, j);
-      }
-    }
-  }
-}
+     for(int i = arena.at(z).size() - 1; i > 0; i--){
+       arena.at(z).at(i) = arena.at(z).at(i-1);
+     }
+     for(unsigned int i = 0; i < arena.at(z).size(); i++){
+       for(unsigned int j = 0; j < arena.at(z).at(i).size(); j++){
+         arena.at(z).at(i).at(j).y++;//we fix the Y coordinate
+       }
+     }
+     arena.at(z).at(0).clear();
+     arena.at(z).at(0).resize(x + 1);
+     for(unsigned int i = 0; i < x + 1; i++){
+       initCells(&arena.at(z).at(arena.at(z).size() - 1).at(i), z, arena.at(z).size() - 1, i);
+     }
+   }
+ }
  //----------------------------------------------- ARENA ------------------------------------------------
  //---------------------------------------------- DIJKSTRA ------------------------------------------------
+/**
+ * [check checks if the cell has no unexplored paths]
+ * @param  y [y-axis position of the current cell being checked]
+ * @param  x [x-axis position of the current cell being checked]
+ * @return   [returns true if there are unexplored paths, else returns false]
+ */
 bool check(int y, int x) { //returns true if at least one neighbour cell isn't explored and there's no wall between the robot and it
   if (!arena[getIndex(z, y, x)].north)
     if (!arena[getIndex(z, y - 1, x)].visited) return true;
@@ -454,7 +442,10 @@ bool check(int y, int x) { //returns true if at least one neighbour cell isn't e
 
   return false;
 }
-
+/**
+ * [end chacks if the whole room has been explored]
+ * @return [true if all check cases where false, else returns true]
+ */
 bool end() { //checks if the whole room has been visited
   for (int i = 0; i < ySize; i++) {
     for (int j = 0; j < xSize; j++) {
@@ -464,13 +455,43 @@ bool end() { //checks if the whole room has been visited
   }
   return true;
 }
-
+/**
+ * [follow tells the robot which is the best path between two points]
+ * @param target [target cell the robot is heading to]
+ */
 void follow(struct Cell target) {
   for (int i = 0; i < target.instructionsSize; i++) {
     moveRobot(target.instructions[i]);
   }
 }
 
+struct Cell lastCheckpoint; //The last checkpoint visited
+int historySize = 1; //keeps track of the amount of tiles in the array
+struct Cell *history = new struct Cell[historySize];
+struct Cell *arena = new struct Cell[zSize * ySize * xSize];
+/**
+ * [addOption adds an optional tile to the list of posible tiles to find the best path between two points]
+ * @param  a           [description]
+ * @param  compareFrom [description]
+ * @param  compareTo   [description]
+ * @param  addWeight   [description]
+ * @return             [description]
+ */
+struct Cell addOption(char a, struct Cell compareFrom, struct Cell compareTo, int addWeight) {
+  compareTo.weight = compareFrom.weight + addWeight; //changes its weight
+  compareTo.instructionsSize = compareFrom.instructionsSize + 1;
+  compareTo.instructions = new char[1 + compareFrom.instructionsSize];
+  for (int i  = 0; i < compareFrom.instructionsSize; i++) {
+    compareTo.instructions[i] = compareFrom.instructions[i];
+  }
+  compareTo.instructions[compareTo.instructionsSize-1] = a; //an extra instruction to get to compareTo is added
+  arena[getIndex(compareTo.z, compareTo.y, compareTo.x)] = compareTo; //the matrix is updated with the newest information
+  return compareTo;
+}
+/**
+ * [search scans the neighbour cells to the current to add them as posible paths]
+ * @param compareFrom [current cell, constantly updated]
+ */
 void search(struct Cell compareFrom) {
   struct Cell compareTo; //cell that's going to be visited from compareFrom
   int optionsSize = 0;
@@ -592,7 +613,9 @@ void search(struct Cell compareFrom) {
   ignore = true;
   delete[] options;
 }
-
+/**
+ * [init makes a turn to the left, depending on which dir is facing to]
+ */
 void init() {
   char one_direction[5] = {'N', 'W', 'S', 'E', 'N'};
   for (int i = 0; i < 4; i++)
@@ -600,7 +623,9 @@ void init() {
       return;
     }
 }
-
+/**
+ * [loadData reads the properties of each cell]
+ */
 void loadData() {
   struct Cell loadCell;
   loadCell.visited = true;
@@ -616,7 +641,9 @@ void loadData() {
   //queda la información de las víctimas y otras cosas. Para testear lo único que importa es que funcione la detección de paredes.
   assignCells(&arena[getIndex(z, y, x)], loadCell);
 }
-
+/**
+ * [changeDir makes the robot face the way it has to]
+ */
 void changeDir() { //changes robot's direction
   bool f = false;
   switch (dir) {
@@ -676,43 +703,40 @@ void changeDir() { //changes robot's direction
     }
   }
 }
-
+/**
+ * [run tells the robot what to do next]
+ */
 void run() {
   moveRobot(dir);
-  loadData();
-  //arena[getIndex(z, y, x)].visited = true; //sets the current cell as visited
-  if (!arena[getIndex(z, y, x)].checkpoint) { //if it's not a checkpoint, it's added to the history of visited cells
-    struct Cell *tempHistory = new struct Cell[++historySize];
-    for (int i = 0; i < historySize-1; i++) {
-      tempHistory[i] = history[i];
+    loadData();
+    //arena[getIndex(z, y, x)].visited = true; //sets the current cell as visited
+    if (!arena.at(z).at(y).at(x).checkpoint) { //if it's not a checkpoint, it's added to the history of visited cells
+      history.push_back(arena.at(z).at(y).at(x));
     }
-    history = new struct Cell[historySize];
-    for (int i = 0; i < historySize; i++) {
-      history[i] = tempHistory[i];
+    else { //if it is a checkpoint, sets it as the last visited checkpoint and resets the history
+      lastCheckpoint = arena.at(z).at(y).at(x);
+      history.clear();
     }
-    delete[] tempHistory;
-    history[historySize] = arena[getIndex(z, y, x)];
-    historySize++;
-  }
-  else { //if it is a checkpoint, sets it as the last visited checkpoint and resets the history
-    delete[] history;
-    historySize = 0;
-    lastCheckpoint = arena[getIndex(z, y, x)];
-  }
-  if (arena[getIndex(z, y, x)].black) { //if it finds a black cell, it'll go back
-    moveTileBackward();
-  }
-  else if (arena[getIndex(z, y, x)].exit) { //if it finds an exit
-    arena[getIndex(z, y, x)].linkedFloor = ++lastFloor;
-    addLayer('z');
-    arena[getIndex(lastFloor, y, x)].linkedFloor = z;
-    //[INSERTE FUNCIÓN PARA SUBIR RAMPAS AQUÍ] //
-    z = lastFloor;
-    ignore = true;
-    arena[getIndex(z, y, x)].visited = true;
-  }
+    if (arena.at(z).at(y).at(x).black) { //if it finds a black cell, it'll go back
+      moveTileBackward();
+    }
+    else if (arena.at(z).at(y).at(x).exit) { //if it finds an exit
+      arena.at(z).at(y).at(x).linkedFloor = ++lastFloor;
+      addLayer('z');
+      arena.at(lastFloor).at(y).at(x).linkedFloor = z;
+      arena.at(lastFloor).at(y).at(x).linkedX = x;
+      arena.at(lastFloor).at(y).at(x).linkedY = y;
+      //[INSERTE FUNCIÓN PARA SUBIR RAMPAS AQUÍ] //
+      x = 0;
+      y = 0;
+      z = lastFloor;
+      ignore = true;
+      arena.at(z).at(y).at(x).visited = true;
+     }
 }
-
+/**
+ * [expand actually expands the arena when it has to]
+ */
 void expand(){
   if(x == 0){
     if(!arena[getIndex(z, y, x)].west)
@@ -731,21 +755,25 @@ void expand(){
       addLayer('y');
   }
 }
-
+/**
+ * [explore description]
+ */
 void explore() {
   loadData();
   expand();
   ignore = false;
   finishedFloor = false ;
   if (!check(y, x)) { //if the robot is stuck
-    if (!arena[getIndex(z, y, x)].exit) search(arena[getIndex(z, y, x)]); //if it's stuck on a visited ramp and the room isn't finished it'll continue exploring the room
-    else if (!finishedFloor) search(arena[getIndex(z, y, x)]); //got stuck on a visited ramp, but there are still some tiles left unvisited.
+    if (!arena.at(z).at(y).at(x).exit) search(arena.at(z).at(y).at(x)); //if it's stuck on a visited ramp and the room isn't finished it'll continue exploring the room
+    else if (!finishedFloor) search(arena.at(z).at(y).at(x)); //got stuck on a visited ramp, but there are still some tiles left unvisited.
     else {
       //[PLEASE INSERTE FUNCIÓN PARA SUBIR O BAJAR UNA RAMPA AQUÍ PLEASEEEEE] //
-      z = arena[getIndex(z, y, x)].linkedFloor;
+      z = arena.at(z).at(y).at(x).linkedFloor;
+      x = arena.at(z).at(y).at(x).linkedX;
+      y = arena.at(z).at(y).at(x).linkedY;
       ignore = true;
-      arena[getIndex(z, y, x)].visited = true; //sets the cell as visited
-      arena[getIndex(z, y, x)].exit = false;
+      arena.at(z).at(y).at(x).visited = true;
+      arena.at(z).at(y).at(x).exit = false;
       finishedFloor = false;
     }
   }
@@ -754,9 +782,13 @@ void explore() {
     if (!ignore) run();
   }
 }
-//---------------------------------------------- DIJKSTRA ------------------------------------------------
-int main(){
-  arena[0].start = true;
+//------------------------------------------ ENDS DIJKSTRA ------------------------------------------------
+int main() {
+  arena.resize(1);
+  arena.at(0).resize(1);
+  arena.at(0).at(0).resize(1);
+  initCells(&arena.at(0).at(0).at(0), 0, 0, 0);
+  arena.at(0).at(0).at(0).start = true;
   while (1) {
     explore();
   }
