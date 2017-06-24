@@ -67,7 +67,7 @@ int lastFloor = 0;
 int quit = 0;
  //------------------------------------------ INITIALIZATION ------------------------------------------------
  //---------------------------------------------- CELLS ------------------------------------------------
-  struct Cell {
+struct Cell {
   bool north; //sets all cells' variables to false (= blank cell)
   bool south;
   bool east;
@@ -127,8 +127,7 @@ void assignCells(struct Cell *to, struct Cell from){
 }
  //---------------------------------------------- CELLS ------------------------------------------------
  //--------------------------------------------- MOVEMENT ------------------------------------------------
-void displaySensorStatus(void)
-{
+void displaySensorStatus(void){
   /* Get the system status values (mostly for debugging purposes) */
   uint8_t system_status, self_test_results, system_error;
   system_status = self_test_results = system_error = 0;
@@ -166,8 +165,8 @@ void init_value_3d_sensor(){
 void turn_90(int direction){
  init_value_3d_sensor();
  float eje_x = 0;
- float eje_y = 0;
- float eje_z = 0;
+ //float eje_y = 0;
+ //float eje_z = 0;
  float grados = 86;
 
  speed_mizq = 0.7f * direction;
@@ -193,7 +192,6 @@ void turn_90(int direction){
 }
 
 void moveTile(int direction){
-
   leftQei.reset();
   rightQei.reset();
 
@@ -210,13 +208,15 @@ void moveTile(int direction){
   while (abs(leftPulses) <= dist_izq || abs(rightPulses) <= dist_der){
     if(abs(leftPulses) <= dist_izq){
       leftPulses  = leftQei.getPulses();
-    } else {
+    }
+    else {
       speed_mizq = 0;
       wait_us(1);
     }
     if(abs(rightPulses) <= dist_der){
       rightPulses = rightQei.getPulses();
-    } else {
+    }
+    else {
       speed_mder = 0;
       wait_us(1);
     }
@@ -679,38 +679,38 @@ void changeDir() { //changes robot's direction
 
 void run() {
   moveRobot(dir);
-    loadData();
-    //arena[getIndex(z, y, x)].visited = true; //sets the current cell as visited
-    if (!arena[getIndex(z, y, x)].checkpoint) { //if it's not a checkpoint, it's added to the history of visited cells
-      struct Cell *tempHistory = new struct Cell[++historySize];
-      for (int i = 0; i < historySize-1; i++) {
-        tempHistory[i] = history[i];
-      }
-      history = new struct Cell[historySize];
-      for (int i = 0; i < historySize; i++) {
-        history[i] = tempHistory[i];
-      }
-      delete[] tempHistory;
-      history[historySize] = arena[getIndex(z, y, x)];
-      historySize++;
+  loadData();
+  //arena[getIndex(z, y, x)].visited = true; //sets the current cell as visited
+  if (!arena[getIndex(z, y, x)].checkpoint) { //if it's not a checkpoint, it's added to the history of visited cells
+    struct Cell *tempHistory = new struct Cell[++historySize];
+    for (int i = 0; i < historySize-1; i++) {
+      tempHistory[i] = history[i];
     }
-    else { //if it is a checkpoint, sets it as the last visited checkpoint and resets the history
-      delete[] history;
-      historySize = 0;
-      lastCheckpoint = arena[getIndex(z, y, x)];
+    history = new struct Cell[historySize];
+    for (int i = 0; i < historySize; i++) {
+      history[i] = tempHistory[i];
     }
-    if (arena[getIndex(z, y, x)].black) { //if it finds a black cell, it'll go back
-      moveTileBackward();
-    }
-    else if (arena[getIndex(z, y, x)].exit) { //if it finds an exit
-      arena[getIndex(z, y, x)].linkedFloor = ++lastFloor;
-      addLayer('z');
-      arena[getIndex(lastFloor, y, x)].linkedFloor = z;
-      //[INSERTE FUNCIÓN PARA SUBIR RAMPAS AQUÍ] //
-      z = lastFloor;
-      ignore = true;
-      arena[getIndex(z, y, x)].visited = true;
-     }
+    delete[] tempHistory;
+    history[historySize] = arena[getIndex(z, y, x)];
+    historySize++;
+  }
+  else { //if it is a checkpoint, sets it as the last visited checkpoint and resets the history
+    delete[] history;
+    historySize = 0;
+    lastCheckpoint = arena[getIndex(z, y, x)];
+  }
+  if (arena[getIndex(z, y, x)].black) { //if it finds a black cell, it'll go back
+    moveTileBackward();
+  }
+  else if (arena[getIndex(z, y, x)].exit) { //if it finds an exit
+    arena[getIndex(z, y, x)].linkedFloor = ++lastFloor;
+    addLayer('z');
+    arena[getIndex(lastFloor, y, x)].linkedFloor = z;
+    //[INSERTE FUNCIÓN PARA SUBIR RAMPAS AQUÍ] //
+    z = lastFloor;
+    ignore = true;
+    arena[getIndex(z, y, x)].visited = true;
+  }
 }
 
 void expand(){
@@ -753,8 +753,9 @@ void explore() {
     changeDir();
     if (!ignore) run();
   }
+}
 //---------------------------------------------- DIJKSTRA ------------------------------------------------
-int main() {
+int main(){
   arena[0].start = true;
   while (1) {
     explore();
