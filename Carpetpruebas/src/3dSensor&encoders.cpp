@@ -142,12 +142,14 @@ void moveTile(int direction){
   while (abs(leftPulses) <= dist_izq || abs(rightPulses) <= dist_der){
     if(abs(leftPulses) <= dist_izq){
       leftPulses  = leftQei.getPulses();
+      pc.printf("encoder_izq: %d \n", leftPulses);
     } else {
       speed_mizq = 0;
       wait_us(1);
     }
     if(abs(rightPulses) <= dist_der){
       rightPulses = rightQei.getPulses();
+      pc.printf("encoder_der: %d \n", rightPulses);
     } else {
       speed_mder = 0;
       wait_us(1);
@@ -175,8 +177,8 @@ int main() {
   while(1){
     //examples about how to call our functions
     moveTileForward();
-    turn_left90();
-    turn_right90();
-    moveTileBackward();
+    //turn_left90();
+    //turn_right90();
+    //moveTileBackward();
   }
 }

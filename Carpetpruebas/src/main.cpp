@@ -222,7 +222,6 @@ int main(){
   pc.baud(115200);
   update_speed_motors.attach_us(&updateSpeedMotors,500.0f); //500us
   pc.printf("Holo \n");
-  wait(1.5f);
   while(1){
     /*ult_del_izq = sensor1.distance();
     wait_ms(50);
