@@ -71,8 +71,8 @@ int cero,uno,dos,tres,cuatro,cinco,seis,siete;
 #define sub_lectura 2
 #define sub_negro 3
 #define sub_blanco 4
-
 #define point_limit 64
+
 int estado = 0;
 int sub_estado = 0;
 bool timer_on = false;
@@ -200,22 +200,22 @@ struct pcardinales {
 };
 
 struct point {
-	int X;
-	int Y;
-	int Z;
+	int X; //node's X position
+	int Y; //node's Y position
+	int Z; //node's Z position
 };
 
 struct navpoint {
-	int X;
-	int Y;
-	int Z;
-	bool conexiones[6];
-	bool f_nav;
-	int pond;
-	bool f_negro;
-	bool f_check;
-	bool hay_vict;
-	bool is_rampa;
+	int X; //node's X position
+	int Y; //node's Y position
+	int Z; //node's Z position
+	bool conexiones[6]; //array of bools with all posible conections (the 4 cardinal points plus ramp upwards and downwards)
+	bool f_nav; //???
+	int pond; //???
+	bool f_negro; //if it's a black cell
+	bool f_check; //if it's a checkpoint
+	bool hay_vict; //if there's a victim
+	bool is_rampa; //if there's a ramp
 };
 
 struct str_rampa {
@@ -230,51 +230,48 @@ struct str_rampa {
 }rampa;
 
 struct robot {
-	int X;
-	int Y;
-	int Z;
-	int pos_destino;
-	int robot_dir;
-	int pos_mc;
-	int micamino[point_limit];
-	int giro;
+	int X; //robot's X position
+	int Y; //robot's Y position
+	int Z; //robot's Z position
+	int pos_destino; //???
+	int robot_dir; //direction the robot's facing
+	int pos_mc; //???
+	int micamino[point_limit]; //array of ??? with a maximum of 64
+	int giro; //???
 } masche;
 
-int cant_puntos = 0;
-struct navpoint pnavegados[point_limit];
+int cant_puntos = 0; //the amount of nodes starts as 0
+struct navpoint pnavegados[point_limit]; //array of nodes with a maximum of 64
 
-//Devuelve un node con las coordenadas del punto que se encuentra en la dirección dir desde el punto (X, Y)
 struct point armar_punto(int X, int Y, int Z, int dir) {
-	struct point punto;
-	if (dir == 0) Y++;
-	else if (dir == 1) X++;
-	else if (dir == 2) Y--;
-	else if (dir == 3) X--;
-	else if (dir == 4) Z--;
-	else Z++;
-	punto.X = X;
+	struct point punto; //creates a new point called punto
+	if (dir == 0) Y++; //if dir = 0, increases Y value
+	else if (dir == 1) X++; //if dir = 1, increases X value
+	else if (dir == 2) Y--; //if dir = 2, decreases Y value
+	else if (dir == 3) X--; //if dir = 3, decreases X value
+	else if (dir == 4) Z--; //if dir = 4, decreases Z value
+	else Z++; //else increases Z value
+	punto.X = X; //sets point's XYZ coordenates equal to the robot´s
 	punto.Y = Y;
 	punto.Z = Z;
-	return punto;
+	return punto; //returns punto with it's coordenates
 }
 
-//Busca un punto en el arrego de puntos existentes y devuelve la posición en la que este se encuentra.
-//Si no existe devuelve el valor cant_puntos
-int buscar_pospunto(int X, int Y, int Z) {
+int buscar_pospunto(int X, int Y, int Z) { 
 	int pos = cant_puntos;
-	for (int i = 0; i < cant_puntos; i++)
-		if (pnavegados[i].X == X && pnavegados[i].Y == Y && pnavegados[i].Z == Z) return i;
-	return pos;
+	for (int i = 0; i < cant_puntos; i++) //runs through every known node
+		if (pnavegados[i].X == X && pnavegados[i].Y == Y && pnavegados[i].Z == Z) return i; //if the node is found, returns it's position
+	return pos; //else returns the amount of nodes
 }
 
 void new_point(int n, int e, int s, int o, bool f_check, bool p_rampa) {
-  int pos_m = buscar_pospunto(masche.X, masche.Y, masche.Z);
-	if(pos_m == 0) { //checks the robot's current node, and if it does not exists, creates a new empty one
-		pnavegados[pos_m].X = masche.X;
+  int pos_m = buscar_pospunto(masche.X, masche.Y, masche.Z); //checks if the robot already knows this node
+	if(pos_m == 0) { //if it's the first node created
+		pnavegados[pos_m].X = masche.X; //the node is on the same XYZ position as the robot
 		pnavegados[pos_m].Y = masche.Y;
 		pnavegados[pos_m].Z = masche.Z;
-		pnavegados[pos_m].hay_vict = false;
-		pnavegados[pos_m].conexiones[4] = false;
+		pnavegados[pos_m].hay_vict = false; //there's no victim
+		pnavegados[pos_m].conexiones[4] = false; //there's no ramp conection neither upwards nor downwards
 		pnavegados[pos_m].conexiones[5] = false;
 		cant_puntos++; //increases the amount of nodes
 	}
@@ -288,103 +285,85 @@ void new_point(int n, int e, int s, int o, bool f_check, bool p_rampa) {
 	if (o > 25 || o == 0) pnavegados[pos_m].conexiones[3] = true;
   
 	pnavegados[pos_m].f_nav = true; //sets the current node as navigated
-	pnavegados[pos_m].f_check = f_check; //???
-	pnavegados[pos_m].is_rampa = p_rampa; //???
+	pnavegados[pos_m].f_check = f_check; //sets as a checkpoint if needed
+	pnavegados[pos_m].is_rampa = p_rampa; //sets as the begining of a ramp if needed ???
 
-	struct point punto; //creates a new structure of points called punto
+	struct point punto; //creates a new point called punto
 	for (int i = 0; i < 4; i++) {
-		punto = armar_punto(masche.X, masche.Y, masche.Z, i);
-		int pos = buscar_pospunto(punto.X, punto.Y, punto.Z);
-		//Si el punto no fue guardado y en la dirección correspondiente hay conexión lo guarda.
-		if (pos == cant_puntos && pnavegados[pos_m].conexiones[i]) {
-			pnavegados[pos].X = punto.X;
-			pnavegados[pos].Y = punto.Y;
+		punto = armar_punto(masche.X, masche.Y, masche.Z, i); //sets the point's coordinates equal to robot's
+		int pos = buscar_pospunto(punto.X, punto.Y, punto.Z); //checks for the current node
+		if (pos == cant_puntos && pnavegados[pos_m].conexiones[i]) { //if it's the last point and has at least one conection
+			pnavegados[pos].X = punto.X; //sets the last node XYZ position equal to punto's
+			pnavegados[pos].Y = punto.Y; 
 			pnavegados[pos].Z = punto.Z;
-			pnavegados[pos].hay_vict = false;
-			pnavegados[pos].pond = point_limit;
-			pnavegados[pos].f_negro = false;
-			pnavegados[pos].f_nav = false;
-			pnavegados[pos].conexiones[4] = false;
+			pnavegados[pos].hay_vict = false; //there's no victim
+			pnavegados[pos].pond = point_limit; //sets the pond to 64
+			pnavegados[pos].f_negro = false; //it's no black cell
+			pnavegados[pos].f_nav = false; //it's no checkpoint
+			pnavegados[pos].conexiones[4] = false; //has no conection with a ramp upwards nor downwards
 			pnavegados[pos].conexiones[5] = false;
-			cant_puntos++;
+			cant_puntos++; //increases the amount of nodes
 		}
 	}
 }
 
-//Devuelve la distancia DX + DY entre dos puntos A y B
-int dist_AB(int AX, int AY, int AZ, int BX, int BY, int BZ) {
+int dist_AB(int AX, int AY, int AZ, int BX, int BY, int BZ) { //returns the distance between the actual node and the objective node
 	return abs(AX - BX) + abs(AY - BY) + abs(AZ - BZ);
 }
 
-//Devuelve la dirección que se debe seguir para llegar de un punto A a un punto B
-//Si devuelve 4 entonces los puntos tienen una distancia mayor a 1
-//Si devuelve 5 entonces los puntos tienen las mismas coordenadas
 int armar_dir(int AX, int AY, int AZ, int BX, int BY, int BZ) {
-	int dist = dist_AB(AX, AY, AZ, BX, BY, BZ);
-	if (dist == 1) {
-		if (AX < BX) return 1;
-		else if (AY < BY) return 0;
-		else if (AY > BY) return 2;
-		else if (AX > BX) return 3;
-		else if (AZ < BZ) return 5;
-		else return 4;
+	int dist = dist_AB(AX, AY, AZ, BX, BY, BZ); //sets how far the objective is
+	if (dist == 1) { //if the objective is next to the actual nodes
+    if (AY < BY) return 0; //returns the direction depending on where the cells are located
+		if (AX < BX) return 1; 
+		if (AY > BY) return 2;
+		if (AX > BX) return 3;
+    if (AZ > BZ) return 4;
+		if (AZ < BZ) return 5;
 	}
-  else if (dist == 0) return 6;
-	else return 7;
+  if (dist == 0) return 6; //if it´s the same node returns 6
+	else return 7; //else returns 7
 }
 
-//Al finalizar la ejecución de esta función todos los puntos terminan ponderados de acuerdo a la cantidad mínima de puntos que se deben atravesar para llegar a un punto objetivo.
-//El punto objetivo se encontrará en la posición pos.
-
-//Devuelve un boolean = 1 si hay conexión entre dos puntos A, de posición pos_ini, y B, de posición pos_fin, existentes.
-//Devuelve un boolean = 1 si hay conexión entre dos puntos A, de posición pos_ini, y B, de posición pos_fin, existentes.
 bool bool_conect(int pos_ini, int pos_fin) {
-	int dir = armar_dir(pnavegados[pos_ini].X, pnavegados[pos_ini].Y, pnavegados[pos_ini].Z, pnavegados[pos_fin].X, pnavegados[pos_fin].Y, pnavegados[pos_fin].Z);
-	//Si el punto fue navegado se conoce las direcciones que se puede seguir desde este
-	//y si existe una dirección para ir de un punto a otro se devuelve el valor de verdad de la conexión
-	if (dir < 6 && pnavegados[pos_ini].f_nav && !pnavegados[pos_ini].f_negro && !pnavegados[pos_fin].f_negro) return pnavegados[pos_ini].conexiones[dir];
-	else return false;
+	int dir = armar_dir(pnavegados[pos_ini].X, pnavegados[pos_ini].Y, pnavegados[pos_ini].Z, pnavegados[pos_fin].X, pnavegados[pos_fin].Y, pnavegados[pos_fin].Z); //sets the direction depending on where it has to go from the actual location
+	if (dir < 6 && pnavegados[pos_ini].f_nav && !pnavegados[pos_ini].f_negro && !pnavegados[pos_fin].f_negro) 
+    return pnavegados[pos_ini].conexiones[dir]; //if it has to go to a node next to it and isn't fully explored and both are non-black cells
+	return false;
 }
 
-//Al finalizar la ejecución de esta función todos los puntos terminan ponderados de acuerdo a la cantidad mínima de puntos que se deben atravesar para llegar a un punto objetivo.
-//El punto objetivo se encontrará en la posición pos.
 void ponderar(int pos) {
-	bool cambios = false;
-	//Inicializo las poderaciones
-	for (int i = 0; i < cant_puntos; i++) pnavegados[i].pond = cant_puntos;
-	int pond_act = 0;
-	int X = pnavegados[pos].X;
+	bool changes = false; //changes start as false
+	for(int i = 0; i < cant_puntos; i++) pnavegados[i].pond = cant_puntos; //set all node's pond to the amount of nodes 
+	int pond_act = 0; //pond_act starts as 0
+	int X = pnavegados[pos].X; //XYZ coordinates are copied
 	int Y = pnavegados[pos].Y;
 	int Z = pnavegados[pos].Z;
-	pnavegados[pos].pond = pond_act;
-	//Ponderizo todos los puntos.
+	pnavegados[pos].pond = pond_act; //sets the node's pond to pond_act
 	do {
-		cambios = false;
-		for (int i = 0; i < cant_puntos; i++) {
-			if (pnavegados[i].pond == pond_act) {
-				for (int j = 0; j < cant_puntos; j++) {
-					if (bool_conect(i, j) && pnavegados[j].pond > pond_act) {
-						cambios = true;
-						pnavegados[j].pond = pond_act + 1;
+		changes = false; //resets changes to false
+		for (int i = 0; i < cant_puntos; i++) { //runs all nodes
+			if (pnavegados[i].pond == pond_act) { //if any node's pond is equal to pond_act
+				for (int j = 0; j < cant_puntos; j++) { //re-runs all nodes
+					if (bool_conect(i, j) && pnavegados[j].pond > pond_act) { //if it has a path to explore and pnavegados[j].pond es higher than pond_act
+						changes = true; //changes changes to true
+						pnavegados[j].pond = pond_act + 1; //sets pnavegados[j].pond to pond_act plus one
 					}
 				}
 			}
 		}
-		pond_act++;
+		pond_act++; increases pond_act
 	} 
-  while (cambios);
+  while (changes);
 }
-//Realizar función para ponderar puntos hasta encontrar destino.
-//Realizar función para elegir destino con ciertas características.
-//Esta función devuelve la posición (en el arreglo de puntos guardados) del punto sin navegar más cercano.
-//En caso de no haber más puntos sin navegar devuelve el punto de inicio del laberinto.
+
 int new_destino() {
 	ponderar(buscar_pospunto(masche.X, masche.Y, masche.Z));
 	int dist = cant_puntos;
 	int pos = 0;
-	for (int i = 0; i < cant_puntos; i++) {
-		if (!pnavegados[i].f_nav && pnavegados[i].pond <= dist && !pnavegados[i].f_negro) {
-			dist = pnavegados[i].pond;
+	for (int i = 0; i < cant_puntos; i++) { //runs all nodes
+		if (!pnavegados[i].f_nav && pnavegados[i].pond <= dist && !pnavegados[i].f_negro) {//if it hasn't been fully explored and isn't a black cell and pond is equal or bigger than dist
+			dist = pnavegados[i].pond; 
 			pos = i;
 		}
 	}
@@ -720,11 +699,10 @@ int main() {
         dist[dir] = dist_n[i];
 			}
       
-			int direc[3] = { (0 + masche.robot_dir) % 4, (1 + masche.robot_dir) % 4, (3 + masche.robot_dir) % 4 };
-			bool p_rampa = false; //sets the begining of the ramp as false
-			new_point(dist[0], dist[1], dist[2], dist[3], false, p_rampa);
-			estado = est_calcular_dest;
-		}    
+			int direc[3] = { (0 + masche.robot_dir) % 4, (1 + masche.robot_dir) % 4, (3 + masche.robot_dir) % 4 }; //???
+			new_point(dist[0], dist[1], dist[2], dist[3], false, false); //creates a new node with no ramp nor checkpoint
+			estado = est_calcular_dest; //sets the robot's state to calculate destiny state
+		}
 
 		if (estado == est_calcular_dest) {
 			new_destino();
@@ -868,4 +846,3 @@ int main() {
     }
   }
 }
-
